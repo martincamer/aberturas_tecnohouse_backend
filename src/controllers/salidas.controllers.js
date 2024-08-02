@@ -26,15 +26,14 @@ export const getSalida = async (req, res) => {
   return res.json(result.rows[0]);
 };
 
-
 export const crearNuevaSalida = async (req, res, next) => {
   const {
     fabrica = "",
     fecha_salida = "",
-    remitos = "[]",
-    aberturas = "[]",
-    contratos = "[]",
-    files = "[]",
+    remitos = [],
+    aberturas = [],
+    contratos = [],
+    files = [],
   } = req.body;
 
   // Asegúrate de que `aberturas` sea un array de objetos JSON
@@ -53,11 +52,12 @@ export const crearNuevaSalida = async (req, res, next) => {
     const stockData = await Promise.all(
       aberturas.map(async (abertura) => {
         const { id, cantidad } = abertura;
-        if (id && cantidad > 0) {
+        if (id && Number(cantidad) > 0) {
           const stockResult = await client.query(
             "SELECT stock FROM aberturas WHERE id = $1",
             [id]
           );
+
           const stockDisponible = stockResult.rows[0]?.stock || 0;
           if (Number(cantidad) > Number(stockDisponible)) {
             throw new Error(
@@ -67,7 +67,7 @@ export const crearNuevaSalida = async (req, res, next) => {
           return {
             id,
             cantidad,
-            stock: stockDisponible,
+            stock: Number(stockDisponible),
           };
         }
         return null;
