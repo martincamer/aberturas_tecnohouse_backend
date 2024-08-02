@@ -26,6 +26,7 @@ export const getSalida = async (req, res) => {
   return res.json(result.rows[0]);
 };
 
+
 export const crearNuevaSalida = async (req, res, next) => {
   const {
     fabrica = "",
@@ -36,24 +37,10 @@ export const crearNuevaSalida = async (req, res, next) => {
     files = "[]",
   } = req.body;
 
-  // Parse JSON strings
-  let parsedRemitos, parsedAberturas, parsedContratos, parsedFiles;
-
-  try {
-    parsedRemitos = JSON.parse(remitos);
-    parsedAberturas = JSON.parse(aberturas);
-    parsedContratos = JSON.parse(contratos);
-    parsedFiles = JSON.parse(files);
-  } catch (error) {
+  // Asegúrate de que `aberturas` sea un array de objetos JSON
+  if (!Array.isArray(aberturas)) {
     return res.status(400).json({
-      message: "Error al analizar los campos JSON.",
-    });
-  }
-
-  // Validate aberturas
-  if (!Array.isArray(parsedAberturas) || !parsedAberturas.every(item => typeof item.id === 'number' && typeof item.cantidad === 'number')) {
-    return res.status(400).json({
-      message: "El campo 'aberturas' debe ser un array de objetos JSON con campos 'id' (número) y 'cantidad' (número).",
+      message: "El campo 'aberturas' debe ser un array de objetos JSON.",
     });
   }
 
@@ -62,9 +49,9 @@ export const crearNuevaSalida = async (req, res, next) => {
   try {
     await client.query("BEGIN");
 
-    // Check stock
+    // Obtener el stock actual de las aberturas y validar
     const stockData = await Promise.all(
-      parsedAberturas.map(async (abertura) => {
+      aberturas.map(async (abertura) => {
         const { id, cantidad } = abertura;
         if (id && cantidad > 0) {
           const stockResult = await client.query(
@@ -87,21 +74,21 @@ export const crearNuevaSalida = async (req, res, next) => {
       })
     );
 
-    // Insert new exit
+    // Insertar nueva salida
     const result = await client.query(
       "INSERT INTO salidas (fabrica, fecha_salida, remitos, aberturas, contratos, files, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
       [
         fabrica,
         fecha_salida,
-        JSON.stringify(parsedRemitos),
-        JSON.stringify(parsedAberturas),
-        JSON.stringify(parsedContratos),
-        JSON.stringify(parsedFiles),
+        JSON.stringify(remitos),
+        JSON.stringify(aberturas),
+        JSON.stringify(contratos),
+        JSON.stringify(files),
         req.userId,
       ]
     );
 
-    // Update stock
+    // Actualizar stock en la tabla aberturas
     for (const stock of stockData) {
       const { id, cantidad } = stock;
       await client.query(
@@ -112,10 +99,11 @@ export const crearNuevaSalida = async (req, res, next) => {
 
     await client.query("COMMIT");
 
-    // Get all exits and openings
+    // Obtener todas las salidas
     const todasLasSalidas = await client.query("SELECT * FROM salidas");
     const todosLasAberturas = await client.query("SELECT * FROM aberturas");
 
+    // Responder con las salidas
     res.json({
       aberturas: todosLasAberturas.rows,
       salidas: todasLasSalidas.rows,
@@ -123,7 +111,7 @@ export const crearNuevaSalida = async (req, res, next) => {
   } catch (error) {
     await client.query("ROLLBACK");
 
-    console.error("Error en la creación de salida:", error.stack || error);
+    console.error("Error en la creación de salida:", error);
 
     if (error.code === "23505") {
       return res.status(409).json({
@@ -131,6 +119,7 @@ export const crearNuevaSalida = async (req, res, next) => {
       });
     }
 
+    // Manejar el error de stock insuficiente
     if (error.message.includes("No hay suficiente stock")) {
       return res.status(400).json({
         message: error.message,
@@ -142,7 +131,6 @@ export const crearNuevaSalida = async (req, res, next) => {
     client.release();
   }
 };
-
 
 // export const crearNuevaSalida = async (req, res, next) => {
 //   const {
