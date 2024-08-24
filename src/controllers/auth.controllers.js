@@ -27,6 +27,7 @@ export const signin = async (req, res) => {
   const token = await createAccessToken({
     id: result.rows[0].id,
     role: result.rows[0].role_id,
+    fabrica: result.rows[0].fabrica,
   });
 
   res.cookie("token", token, {
@@ -41,19 +42,20 @@ export const signin = async (req, res) => {
 
 // signup
 export const signup = async (req, res, next) => {
-  const { username, email, password } = req.body;
+  const { username, email, password, fabrica } = req.body;
 
   try {
     const hashedPassword = await bcrypts.hash(password, 10);
 
     const result = await pool.query(
-      "INSERT INTO users(username,password,email) VALUES($1,$2,$3) RETURNING *",
-      [username, hashedPassword, email] // Assuming 'user' role has an id of 2
+      "INSERT INTO users(username,password,email,fabrica) VALUES($1,$2, $3, $4) RETURNING *",
+      [username, hashedPassword, email, fabrica] // Assuming 'user' role has an id of 2
     );
 
     const token = await createAccessToken({
       id: result.rows[0].id,
       role: result.rows[0].role_id,
+      fabrica: result.rows[0].fabrica,
     });
 
     res.cookie("token", token, {

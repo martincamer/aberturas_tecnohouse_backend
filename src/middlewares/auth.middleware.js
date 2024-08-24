@@ -14,7 +14,9 @@ export const isAuth = (req, res, next) => {
       return res.tatus(401).json({
         message: "No estas autorizado",
       });
+
     req.userId = decoded.id;
+    req.fabrica = decoded.fabrica;
   });
 
   next();

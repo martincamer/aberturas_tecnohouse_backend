@@ -5,6 +5,7 @@ import aberturasRoutes from "./routes/aberturas.routes.js";
 import fabricasRoutes from "./routes/fabricas.routes.js";
 import salidasRoutes from "./routes/salidas.routes.js";
 import cierresRoutes from "./routes/cierres.routes.js";
+import pedidosRoutes from "./routes/pedidos.routes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import bodyParser from "body-parser";
@@ -39,6 +40,7 @@ app.use("/api", aberturasRoutes);
 app.use("/api", fabricasRoutes);
 app.use("/api", salidasRoutes);
 app.use("/api", cierresRoutes);
+app.use("/api", pedidosRoutes);
 
 // Error handler
 app.use((err, req, res, next) => {
