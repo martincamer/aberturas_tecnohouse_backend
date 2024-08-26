@@ -110,10 +110,12 @@ export const eliminarPedido = async (req, res) => {
       });
     }
 
-    const pedido = pedidoResult.rows[0];
+    await client.query("COMMIT");
 
-    // Obtener todos los pedidos
-    const todosLosPedidos = await client.query("SELECT * FROM pedidos");
+    const todosLosPedidos = await client.query(
+      "SELECT * FROM pedidos WHERE fabrica = $1 AND user_id = $2",
+      [req.fabrica, req.userId]
+    );
 
     // Responder con los pedidos
     res.json({
@@ -174,6 +176,57 @@ export const actualizarEstadoPedido = async (req, res, next) => {
     await client.query("ROLLBACK");
 
     console.error("Error al actualizar el estado del pedido:", error);
+    next(error);
+  } finally {
+    client.release();
+  }
+};
+
+export const actualizarPedido = async (req, res, next) => {
+  const { id } = req.params; // ID del pedido a actualizar
+  const { aberturas } = req.body;
+
+  // Asegúrate de que `aberturas` sea un array de objetos JSON
+  if (!Array.isArray(aberturas)) {
+    return res.status(400).json({
+      message: "El campo 'aberturas' debe ser un array de objetos JSON.",
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Actualizar el pedido existente
+    const result = await client.query(
+      "UPDATE pedidos SET aberturas = $1, fabrica = $2 WHERE id = $3 AND user_id = $4 RETURNING *",
+      [JSON.stringify(aberturas), req.fabrica, id, req.userId]
+    );
+
+    if (result.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({
+        message: "Pedido no encontrado o no autorizado.",
+      });
+    }
+
+    await client.query("COMMIT");
+
+    const todosLosPedidos = await client.query(
+      "SELECT * FROM pedidos WHERE fabrica = $1 AND user_id = $2",
+      [req.fabrica, req.userId]
+    );
+
+    // Responder con los pedidos
+    res.json({
+      pedidos: todosLosPedidos.rows,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("Error al actualizar el pedido:", error);
+
     next(error);
   } finally {
     client.release();
