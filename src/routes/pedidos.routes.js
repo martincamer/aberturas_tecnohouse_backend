@@ -25,6 +25,6 @@ router.delete("/pedido/:id", isAuth, eliminarPedido);
 
 router.put("/pedido/:id", isAuth, actualizarPedido);
 
-router.put("/pedido/:pedidoId", isAuth, actualizarEstadoPedido);
+router.put("/pedido-estado/:pedidoId", isAuth, actualizarEstadoPedido);
 
 export default router;
