@@ -26,101 +26,101 @@ export const getSalida = async (req, res) => {
   return res.json(result.rows[0]);
 };
 
-export const crearNuevaSalida = async (req, res, next) => {
-  const {
-    fabrica = "",
-    fecha_salida = "",
-    remitos = [],
-    aberturas = [],
-    contratos = [],
-    files = [],
-  } = req.body;
+// export const crearNuevaSalida = async (req, res, next) => {
+//   const {
+//     fabrica = "",
+//     fecha_salida = "",
+//     remitos = [],
+//     aberturas = [],
+//     contratos = [],
+//     files = [],
+//   } = req.body;
 
-  // Asegúrate de que `aberturas` sea un array de objetos JSON
-  if (!Array.isArray(aberturas)) {
-    return res.status(400).json({
-      message: "El campo 'aberturas' debe ser un array de objetos JSON.",
-    });
-  }
+//   // Asegúrate de que `aberturas` sea un array de objetos JSON
+//   if (!Array.isArray(aberturas)) {
+//     return res.status(400).json({
+//       message: "El campo 'aberturas' debe ser un array de objetos JSON.",
+//     });
+//   }
 
-  const client = await pool.connect();
+//   const client = await pool.connect();
 
-  try {
-    await client.query("BEGIN");
+//   try {
+//     await client.query("BEGIN");
 
-    // Obtener el stock actual de las aberturas y validar
-    const stockData = await Promise.all(
-      aberturas.map(async (abertura) => {
-        const { id, cantidad } = abertura;
-        if (id && Number(cantidad) > 0) {
-          const stockResult = await client.query(
-            "SELECT stock FROM aberturas WHERE id = $1",
-            [id]
-          );
+//     // Obtener el stock actual de las aberturas y validar
+//     const stockData = await Promise.all(
+//       aberturas.map(async (abertura) => {
+//         const { id, cantidad } = abertura;
+//         if (id && Number(cantidad) > 0) {
+//           const stockResult = await client.query(
+//             "SELECT stock FROM aberturas WHERE id = $1",
+//             [id]
+//           );
 
-          const stockDisponible = stockResult.rows[0]?.stock || 0;
+//           const stockDisponible = stockResult.rows[0]?.stock || 0;
 
-          // No arrojamos error si no hay suficiente stock, simplemente procedemos con la actualización
-          return {
-            id,
-            cantidad,
-            stock: Number(stockDisponible),
-          };
-        }
-        return null;
-      })
-    );
+//           // No arrojamos error si no hay suficiente stock, simplemente procedemos con la actualización
+//           return {
+//             id,
+//             cantidad,
+//             stock: Number(stockDisponible),
+//           };
+//         }
+//         return null;
+//       })
+//     );
 
-    // Insertar nueva salida
-    const result = await client.query(
-      "INSERT INTO salidas (fabrica, fecha_salida, remitos, aberturas, contratos, files, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-      [
-        fabrica,
-        fecha_salida,
-        JSON.stringify(remitos),
-        JSON.stringify(aberturas),
-        JSON.stringify(contratos),
-        JSON.stringify(files),
-        req.userId,
-      ]
-    );
+//     // Insertar nueva salida
+//     const result = await client.query(
+//       "INSERT INTO salidas (fabrica, fecha_salida, remitos, aberturas, contratos, files, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+//       [
+//         fabrica,
+//         fecha_salida,
+//         JSON.stringify(remitos),
+//         JSON.stringify(aberturas),
+//         JSON.stringify(contratos),
+//         JSON.stringify(files),
+//         req.userId,
+//       ]
+//     );
 
-    // Actualizar stock en la tabla aberturas
-    for (const stock of stockData) {
-      const { id, cantidad } = stock;
-      await client.query(
-        "UPDATE aberturas SET stock = stock - $1 WHERE id = $2",
-        [cantidad, id]
-      );
-    }
+//     // Actualizar stock en la tabla aberturas
+//     for (const stock of stockData) {
+//       const { id, cantidad } = stock;
+//       await client.query(
+//         "UPDATE aberturas SET stock = stock - $1 WHERE id = $2",
+//         [cantidad, id]
+//       );
+//     }
 
-    await client.query("COMMIT");
+//     await client.query("COMMIT");
 
-    // Obtener todas las salidas
-    const todasLasSalidas = await client.query("SELECT * FROM salidas");
-    const todosLasAberturas = await client.query("SELECT * FROM aberturas");
+//     // Obtener todas las salidas
+//     const todasLasSalidas = await client.query("SELECT * FROM salidas");
+//     const todosLasAberturas = await client.query("SELECT * FROM aberturas");
 
-    // Responder con las salidas
-    res.json({
-      aberturas: todosLasAberturas.rows,
-      salidas: todasLasSalidas.rows,
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
+//     // Responder con las salidas
+//     res.json({
+//       aberturas: todosLasAberturas.rows,
+//       salidas: todasLasSalidas.rows,
+//     });
+//   } catch (error) {
+//     await client.query("ROLLBACK");
 
-    console.error("Error en la creación de salida:", error);
+//     console.error("Error en la creación de salida:", error);
 
-    if (error.code === "23505") {
-      return res.status(409).json({
-        message: "Ya existe una abertura con ese id",
-      });
-    }
+//     if (error.code === "23505") {
+//       return res.status(409).json({
+//         message: "Ya existe una abertura con ese id",
+//       });
+//     }
 
-    next(error);
-  } finally {
-    client.release();
-  }
-};
+//     next(error);
+//   } finally {
+//     client.release();
+//   }
+// };
 
 // export const crearNuevaSalida = async (req, res, next) => {
 //   const {
@@ -626,6 +626,70 @@ export const crearNuevaSalida = async (req, res, next) => {
 
 //   res.json(todasLasSalidas.rows);
 // };
+
+export const crearNuevaSalida = async (req, res, next) => {
+  const {
+    fabrica = "",
+    fecha_salida = "",
+    remitos = [],
+    aberturas = [],
+    contratos = [],
+    files = [],
+  } = req.body;
+
+  // Asegúrate de que `aberturas` sea un array de objetos JSON
+  if (!Array.isArray(aberturas)) {
+    return res.status(400).json({
+      message: "El campo 'aberturas' debe ser un array de objetos JSON.",
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Insertar nueva salida
+    const result = await client.query(
+      "INSERT INTO salidas (fabrica, fecha_salida, remitos, aberturas, contratos, files, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+      [
+        fabrica,
+        fecha_salida,
+        JSON.stringify(remitos),
+        JSON.stringify(aberturas),
+        JSON.stringify(contratos),
+        JSON.stringify(files),
+        req.userId,
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    // Obtener todas las salidas
+    const todasLasSalidas = await client.query("SELECT * FROM salidas");
+    const todasLasAberturas = await client.query("SELECT * FROM aberturas");
+
+    // Responder con las salidas y aberturas
+    res.json({
+      aberturas: todasLasAberturas.rows,
+      salidas: todasLasSalidas.rows,
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    console.error("Error en la creación de salida:", error);
+
+    if (error.code === "23505") {
+      return res.status(409).json({
+        message: "Ya existe una abertura con ese id",
+      });
+    }
+
+    next(error);
+  } finally {
+    client.release();
+  }
+};
 
 export const eliminarSalida = async (req, res) => {
   let client;
