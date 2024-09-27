@@ -42,7 +42,7 @@ export const crearNuevoCierre = async (req, res, next) => {
     );
 
     const todosLosCierres = await pool.query("SELECT * FROM cierres");
-
+    //asdd
     res.json(todosLosCierres.rows);
   } catch (error) {
     if (error.code === "23505") {
