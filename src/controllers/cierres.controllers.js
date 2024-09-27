@@ -13,7 +13,7 @@ export const getCierres = async (req, res, next) => {
 };
 
 export const getCierre = async (req, res) => {
-  const result = await pool.query("SELECT * FROM cierre WHERE id = $1", [
+  const result = await pool.query("SELECT * FROM cierres WHERE id = $1", [
     req.params.id,
   ]);
 
@@ -27,12 +27,18 @@ export const getCierre = async (req, res) => {
 };
 
 export const crearNuevoCierre = async (req, res, next) => {
-  const { fecha_salida, numero_salidas, numero_stock } = req.body;
+  const { fecha_salida, numero_salidas, numero_stock, files = [] } = req.body;
 
   try {
     const result = await pool.query(
-      "INSERT INTO cierres (fecha_salida, numero_salidas, numero_stock, user_id) VALUES ($1, $2, $3, $4) RETURNING *",
-      [fecha_salida, numero_salidas, numero_stock, req.userId]
+      "INSERT INTO cierres (fecha_salida, numero_salidas, numero_stock,files, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+      [
+        fecha_salida,
+        numero_salidas,
+        numero_stock,
+        JSON.stringify(files),
+        req.userId,
+      ]
     );
 
     const todosLosCierres = await pool.query("SELECT * FROM cierres");
